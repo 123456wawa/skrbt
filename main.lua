@@ -1,6 +1,6 @@
 -- ==========================================
--- السكربت المطور | blokspin
--- ميزات: قائمة مربعة، قفل (X)، زر دائري (B)، زر نقزة وزر نطة فورية
+-- سكربت blokspin المطور | نظام أزرار ذكي (Toggle)
+-- ميزات: أخضر = شغال، رمادي = طافي
 -- ==========================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -9,33 +9,32 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- حذف أي واجهة قديمة لتجنب التكرار
-if CoreGui:FindFirstChild("BlokSpinGui") then
-    CoreGui:FindFirstChild("BlokSpinGui"):Destroy()
+if CoreGui:FindFirstChild("BlokSpinToggleGui") then
+    CoreGui:FindFirstChild("BlokSpinToggleGui"):Destroy()
 end
 
 -- ==========================================
 -- 1. إنشاء الواجهة الرئيسية
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BlokSpinGui"
+ScreenGui.Name = "BlokSpinToggleGui"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- القائمة المربعة الرئيسية (تم زيادة الارتفاع لتناسب الأزرار)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- أسود غامق عصري
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- أسود غامق
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -125) -- في منتصف الشاشة
-MainFrame.Size = UDim2.new(0, 300, 0, 250) -- حجم مربع ممتاز
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 300, 0, 180) -- حجم متناسق ومربع
 MainFrame.Visible = true
 
 local UICornerMain = Instance.new("UICorner")
 UICornerMain.CornerRadius = UDim.new(0, 10)
 UICornerMain.Parent = MainFrame
 
--- شريط العنوان (Top Bar)
+-- شريط العنوان
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Parent = MainFrame
@@ -53,7 +52,7 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
 TitleLabel.Size = UDim2.new(0, 200, 1, 0)
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.Text = "blokspin" -- تم تغيير الاسم هنا
+TitleLabel.Text = "blokspin"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -70,24 +69,28 @@ CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
 CloseButton.TextSize = 20
 
--- ترتيب الأزرار تلقائياً لمنع اللخبطة
+-- حاوية الأزرار
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Parent = MainFrame
 ContentFrame.BackgroundTransparency = 1
-ContentFrame.Position = UDim2.new(0, 15, 0, 45)
-ContentFrame.Size = UDim2.new(1, -30, 1, -55)
+ContentFrame.Position = UDim2.new(0, 15, 0, 50)
+ContentFrame.Size = UDim2.new(1, -30, 1, -60)
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = ContentFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.Padding = UDim.new(0, 12)
 
--- تجميل الأزرار تلقائياً
+-- متغيرات تتبع حالة الأزرار (طافي في البداية)
+local speedEnabled = false
+local jumpEnabled = false
+
+-- وظيفة لتصميم الأزرار بشكل افتراضي (رمادي غامق)
 local function styleButton(btn, text)
-    btn.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- لون رمادي (طافي)
     btn.BorderSizePixel = 0
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.Font = Enum.Font.GothamMedium
+    btn.Size = UDim2.new(1, 0, 0, 45)
+    btn.Font = Enum.Font.GothamBold
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextSize = 14
@@ -96,63 +99,74 @@ local function styleButton(btn, text)
     corner.Parent = btn
 end
 
--- [1] زر زيادة السرعة
-local SpeedButton = Instance.new("TextButton")
-SpeedButton.Parent = ContentFrame
-styleButton(SpeedButton, "زيادة السرعة (Speed)")
-SpeedButton.MouseButton1Click:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = 100
+-- [1] زر تشغيل/إطفاء السرعة
+local SpeedToggle = Instance.new("TextButton")
+SpeedToggle.Parent = ContentFrame
+styleButton(SpeedToggle, "الركض السريع: معطل 🛑")
+
+SpeedToggle.MouseButton1Click:Connect(function()
+    speedEnabled = not speedEnabled -- عكس الحالة الحالية
+    if speedEnabled then
+        SpeedToggle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- يقلب أخضر
+        SpeedToggle.Text = "الركض السريع: مشغل ✅"
+    else
+        SpeedToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- يرجع رمادي
+        SpeedToggle.Text = "الركض السريع: معطل 🛑"
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = 16 -- إرجاع للسرعة الطبيعية فوراً
+        end
     end
 end)
 
--- [2] زر النقزة العالية
-local JumpButton = Instance.new("TextButton")
-JumpButton.Parent = ContentFrame
-styleButton(JumpButton, "تفعيل النقزة العالية (Jump Power)")
-JumpButton.MouseButton1Click:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.JumpPower = 130
+-- [2] زر تشغيل/إطفاء النقزة
+local JumpToggle = Instance.new("TextButton")
+JumpToggle.Parent = ContentFrame
+styleButton(JumpToggle, "النقزة العالية: معطل 🛑")
+
+JumpToggle.MouseButton1Click:Connect(function()
+    jumpEnabled = not jumpEnabled -- عكس الحالة الحالية
+    if jumpEnabled then
+        JumpToggle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- يقلب أخضر
+        JumpToggle.Text = "النقزة العالية: مشغل ✅"
+    else
+        JumpToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- يرجع رمادي
+        JumpToggle.Text = "النقزة العالية: معطل 🛑"
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.JumpPower = 50 -- إرجاع للنقزة الطبيعية فوراً
+        end
     end
 end)
 
--- [3] زر النطة الفورية (اضغطه يرفعك فوق علطول)
-local HopButton = Instance.new("TextButton")
-HopButton.Parent = ContentFrame
-styleButton(HopButton, "💥 نطة فورية للاعلى (اضغط هنا) 💥")
-HopButton.BackgroundColor3 = Color3.fromRGB(40, 80, 150) -- لون مميز للضغط
-HopButton.MouseButton1Click:Connect(function()
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.Velocity = Vector3.new(hrp.Velocity.X, 140, hrp.Velocity.Z) -- دفعة قوية للأعلى
-    end
-end)
-
--- [4] زر إرجاع الوضع الطبيعي
-local ResetButton = Instance.new("TextButton")
-ResetButton.Parent = ContentFrame
-styleButton(ResetButton, "إرجاع الوضع الطبيعي")
-ResetButton.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
-ResetButton.MouseButton1Click:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = 16
-        LocalPlayer.Character.Humanoid.JumpPower = 50
+-- [لوب داخلي مستمر] لتطبيق الميزات بدون ما تخرب عليك اللعبة عند المشي أو الترسيت
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if speedEnabled then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = 100
+            end
+        end
+        if jumpEnabled then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.JumpPower = 130
+            end
+        end
     end
 end)
 
 -- ==========================================
--- 3. إنشاء زر الفتح الدائري القابل للسحب (B)
+-- 3. زر الفتح الدائري (B)
 -- ==========================================
 local OpenCircle = Instance.new("TextButton")
 OpenCircle.Name = "OpenCircle"
 OpenCircle.Parent = ScreenGui
-OpenCircle.BackgroundColor3 = Color3.fromRGB(70, 180, 70) -- لون أخضر فخم للزر الدائري
+OpenCircle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- أخضر فخم للزر الدائري
 OpenCircle.BorderSizePixel = 0
 OpenCircle.Position = UDim2.new(0, 20, 0, 20)
 OpenCircle.Size = UDim2.new(0, 55, 0, 55)
 OpenCircle.Visible = false
 OpenCircle.Font = Enum.Font.GothamBold
-OpenCircle.Text = "B" -- اختصار Blokspin
+OpenCircle.Text = "B"
 OpenCircle.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenCircle.TextSize = 24
 OpenCircle.ZIndex = 10
@@ -203,3 +217,4 @@ OpenCircle.MouseButton1Click:Connect(function()
         OpenCircle.Visible = false
     end
 end)
+
