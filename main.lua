@@ -1,6 +1,6 @@
 -- ==========================================
--- سكربت blokspin المطور | نظام أزرار ذكي (Toggle)
--- ميزات: أخضر = شغال، رمادي = طافي
+-- سكربت blokspin المحمي | نظام الرمز السري (Key System)
+-- الرمز السري الصحيح هو: WAFI
 -- ==========================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -9,32 +9,97 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- حذف أي واجهة قديمة لتجنب التكرار
-if CoreGui:FindFirstChild("BlokSpinToggleGui") then
-    CoreGui:FindFirstChild("BlokSpinToggleGui"):Destroy()
+if CoreGui:FindFirstChild("BlokSpinProtectedGui") then
+    CoreGui:FindFirstChild("BlokSpinProtectedGui"):Destroy()
 end
 
 -- ==========================================
--- 1. إنشاء الواجهة الرئيسية
+-- 1. إنشاء الواجهة الرئيسية (ScreenGui)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BlokSpinToggleGui"
+ScreenGui.Name = "BlokSpinProtectedGui"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+-- ==========================================
+-- 2. قائمة الرمز السري (Key System Frame)
+-- ==========================================
+local KeyFrame = Instance.new("Frame")
+KeyFrame.Name = "KeyFrame"
+KeyFrame.Parent = ScreenGui
+KeyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+KeyFrame.BorderSizePixel = 0
+KeyFrame.Position = UDim2.new(0.5, -140, 0.5, -80)
+KeyFrame.Size = UDim2.new(0, 280, 0, 160)
+KeyFrame.Visible = true -- تظهر أول ما يشتغل السكربت
+
+local UICornerKey = Instance.new("UICorner")
+UICornerKey.CornerRadius = UDim.new(0, 10)
+UICornerKey.Parent = KeyFrame
+
+-- عنوان قائمة الرمز السري
+local KeyTitle = Instance.new("TextLabel")
+KeyTitle.Parent = KeyFrame
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Position = UDim2.new(0, 0, 0, 15)
+KeyTitle.Size = UDim2.new(1, 0, 0, 25)
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.Text = "أدخل الرمز السري لتفعيل السكربت"
+KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyTitle.TextSize = 14
+
+-- مربع إدخال النص (TextBox)
+local KeyInput = Instance.new("TextBox")
+KeyInput.Parent = KeyFrame
+KeyInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+KeyInput.BorderSizePixel = 0
+KeyInput.Position = UDim2.new(0.1, 0, 0.4, 0)
+KeyInput.Size = UDim2.new(0.8, 0, 0, 35)
+KeyInput.Font = Enum.Font.GothamMedium
+KeyInput.PlaceholderText = "اكتب الرمز هنا..."
+KeyInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+KeyInput.Text = ""
+KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyInput.TextSize = 14
+
+local UICornerInput = Instance.new("UICorner")
+UICornerInput.CornerRadius = UDim.new(0, 6)
+UICornerInput.Parent = KeyInput
+
+-- زر التحقق
+local SubmitButton = Instance.new("TextButton")
+SubmitButton.Parent = KeyFrame
+SubmitButton.BackgroundColor3 = Color3.fromRGB(241, 196, 15) -- لون أصفر ذهبي
+SubmitButton.BorderSizePixel = 0
+SubmitButton.Position = UDim2.new(0.1, 0, 0.7, 5)
+SubmitButton.Size = UDim2.new(0.8, 0, 0, 35)
+SubmitButton.Font = Enum.Font.GothamBold
+SubmitButton.Text = "تحقق من الرمز"
+SubmitButton.TextColor3 = Color3.fromRGB(30, 30, 30)
+SubmitButton.TextSize = 14
+
+local UICornerSubmit = Instance.new("UICorner")
+UICornerSubmit.CornerRadius = UDim.new(0, 6)
+UICornerSubmit.Parent = SubmitButton
+
+
+-- ==========================================
+-- 3. قائمة السكربت الرئيسية (blokspin) - مخفية بالبداية
+-- ==========================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- أسود غامق
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-MainFrame.Size = UDim2.new(0, 300, 0, 180) -- حجم متناسق ومربع
-MainFrame.Visible = true
+MainFrame.Size = UDim2.new(0, 300, 0, 180)
+MainFrame.Visible = false -- مخفية حتى يكتب الرمز الصح
 
 local UICornerMain = Instance.new("UICorner")
 UICornerMain.CornerRadius = UDim.new(0, 10)
 UICornerMain.Parent = MainFrame
 
--- شريط العنوان
+-- شريط عنوان قائمة السكربت
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Parent = MainFrame
@@ -81,13 +146,12 @@ UIListLayout.Parent = ContentFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 12)
 
--- متغيرات تتبع حالة الأزرار (طافي في البداية)
+-- ميزات تشغيل وإطفاء الأزرار (Toggle)
 local speedEnabled = false
 local jumpEnabled = false
 
--- وظيفة لتصميم الأزرار بشكل افتراضي (رمادي غامق)
 local function styleButton(btn, text)
-    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- لون رمادي (طافي)
+    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- رمادي (طافي)
     btn.BorderSizePixel = 0
     btn.Size = UDim2.new(1, 0, 0, 45)
     btn.Font = Enum.Font.GothamBold
@@ -99,45 +163,45 @@ local function styleButton(btn, text)
     corner.Parent = btn
 end
 
--- [1] زر تشغيل/إطفاء السرعة
+-- زر السرعة الذكي
 local SpeedToggle = Instance.new("TextButton")
 SpeedToggle.Parent = ContentFrame
 styleButton(SpeedToggle, "الركض السريع: معطل 🛑")
 
 SpeedToggle.MouseButton1Click:Connect(function()
-    speedEnabled = not speedEnabled -- عكس الحالة الحالية
+    speedEnabled = not speedEnabled
     if speedEnabled then
-        SpeedToggle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- يقلب أخضر
+        SpeedToggle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- أخضر
         SpeedToggle.Text = "الركض السريع: مشغل ✅"
     else
-        SpeedToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- يرجع رمادي
+        SpeedToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- رمادي
         SpeedToggle.Text = "الركض السريع: معطل 🛑"
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = 16 -- إرجاع للسرعة الطبيعية فوراً
+            LocalPlayer.Character.Humanoid.WalkSpeed = 16
         end
     end
 end)
 
--- [2] زر تشغيل/إطفاء النقزة
+-- زر النقزة الذكي
 local JumpToggle = Instance.new("TextButton")
 JumpToggle.Parent = ContentFrame
 styleButton(JumpToggle, "النقزة العالية: معطل 🛑")
 
 JumpToggle.MouseButton1Click:Connect(function()
-    jumpEnabled = not jumpEnabled -- عكس الحالة الحالية
+    jumpEnabled = not jumpEnabled
     if jumpEnabled then
-        JumpToggle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- يقلب أخضر
+        JumpToggle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- أخضر
         JumpToggle.Text = "النقزة العالية: مشغل ✅"
     else
-        JumpToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- يرجع رمادي
+        JumpToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- رمادي
         JumpToggle.Text = "النقزة العالية: معطل 🛑"
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.JumpPower = 50 -- إرجاع للنقزة الطبيعية فوراً
+            LocalPlayer.Character.Humanoid.JumpPower = 50
         end
     end
 end)
 
--- [لوب داخلي مستمر] لتطبيق الميزات بدون ما تخرب عليك اللعبة عند المشي أو الترسيت
+-- اللوب لتثبيت الخصائص
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -155,12 +219,12 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 3. زر الفتح الدائري (B)
+-- 4. زر الفتح الدائري القابل للسحب (B)
 -- ==========================================
 local OpenCircle = Instance.new("TextButton")
 OpenCircle.Name = "OpenCircle"
 OpenCircle.Parent = ScreenGui
-OpenCircle.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- أخضر فخم للزر الدائري
+OpenCircle.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 OpenCircle.BorderSizePixel = 0
 OpenCircle.Position = UDim2.new(0, 20, 0, 20)
 OpenCircle.Size = UDim2.new(0, 55, 0, 55)
@@ -205,7 +269,7 @@ UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then update(input) end
 end)
 
--- برمجة التبديل والـ X
+-- برمجة فتح وتصغير القائمة الأساسية
 CloseButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     OpenCircle.Visible = true
@@ -218,3 +282,16 @@ OpenCircle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- ==========================================
+-- 5. برمجة منطق التحقق من الرمز السري (WAFI)
+-- ==========================================
+SubmitButton.MouseButton1Click:Connect(function()
+    if KeyInput.Text == "WAFI" then
+        KeyFrame:Destroy() -- حذف قائمة الرمز لأنها خلاص ما نحتاجها
+        MainFrame.Visible = true -- فتح قائمة الهكر الأساسية فوراً!
+    else
+        KeyInput.Text = "" -- مسح النص الغلط
+        KeyInput.PlaceholderText = "❌ رمز خاطئ! حاول مجدداً"
+        KeyInput.PlaceholderColor3 = Color3.fromRGB(255, 100, 100) -- يقلب التلميح أحمر تنبيهي
+    end
+end)
