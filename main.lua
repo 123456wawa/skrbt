@@ -1,5 +1,5 @@
 -- ==========================================
--- وافي Hub V2 | قائمة مخصصة خفيفة
+-- وافي | قائمة مخصصة خفيفة
 -- ميزات: قائمة مربعة، قفل (X)، زر تدوير سحب وإفلات
 -- ==========================================
 
@@ -9,15 +9,15 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- حذف أي واجهة قديمة لتجنب التكرار
-if CoreGui:FindFirstChild("WafiHubV2") then
-    CoreGui:FindFirstChild("WafiHubV2"):Destroy()
+if CoreGui:FindFirstChild("WafiGui") then
+    CoreGui:FindFirstChild("WafiGui"):Destroy()
 end
 
 -- ==========================================
 -- 1. إنشاء الواجهة الرئيسية
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WafiHubV2"
+ScreenGui.Name = "WafiGui"
 ScreenGui.Parent = CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -53,7 +53,7 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Position = UDim2.new(0, 10, 0, 0)
 TitleLabel.Size = UDim2.new(0, 200, 1, 0)
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.Text = "وافي Hub V2"
+TitleLabel.Text = "وافي" -- تم التعديل هنا ليكون "وافي" فقط
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -71,7 +71,7 @@ CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100) -- أحمر خفيف
 CloseButton.TextSize = 20
 
 -- ==========================================
--- 2. محتوى القائمة المربعة (مثال السرعة والقفز)
+-- 2. محتوى القائمة المربعة (السرعة والقفز)
 -- ==========================================
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Parent = MainFrame
@@ -193,10 +193,8 @@ end)
 
 -- عند ضغط الزر الدائري (الفتـح)
 OpenCircle.MouseButton1Click:Connect(function()
-    -- إذا كنت تسحبه، لا تفتحه (تجنب الفتح عند نهاية السحب)
     if not dragging then
         MainFrame.Visible = true
         OpenCircle.Visible = false
     end
 end)
-
